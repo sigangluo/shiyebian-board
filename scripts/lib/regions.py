@@ -13,7 +13,7 @@ REGIONS_DIR = ROOT / "regions"
 DATA_DIR = ROOT / "data"
 REQUIRED_META = ("name", "list_url", "batches")
 REQUIRED_BATCH = ("name", "published", "notice_url")
-FRESH_KINDS = ("year", "unemployed", "no_staff_job", "unplaced")      # 含义见 lib/match.py 的 fresh_verdict
+FRESH_KINDS = ("year", "year_window", "unemployed", "no_staff_job", "unplaced")      # 含义见 lib/match.py 的 fresh_verdict
 EXAM_INFO_REQUIRED = ("written", "shortlist", "interview", "score")    # exam_info 的必填项；其余 written_date / after / notes 可省略
 
 

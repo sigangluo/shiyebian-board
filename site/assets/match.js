@@ -76,6 +76,10 @@
     const tail = rule.closed ? `（按已结束的这一批的规则推断，假设下一批规则不变、届别顺延到 ${c} 届）` : "";
     const employed = !!profile.employed_now;
     if (kind === "year") return [gy === c ? "yes" : "no", `该批次按毕业年份判断：应届 = ${c} 年毕业，考生为 ${gy} 年毕业${tail}`];
+    if (kind === "year_window") {
+      const lo = c - window;
+      return [lo <= gy && gy <= c ? "yes" : "no", `该批次应届含 ${lo}–${c} 年毕业，不看是否在职，考生为 ${gy} 年毕业${tail}`];
+    }
     if (!(c - window <= gy && gy <= c)) return ["no", `该批次应届限毕业 ${window} 年内（${c - window}–${c} 年毕业），考生为 ${gy} 年毕业${tail}`];
     if (kind === "unemployed") {
       return employed ? ["no", `该批次要求报名时无工作单位，考生目前在职${tail}`]

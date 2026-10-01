@@ -64,6 +64,10 @@ test("应届规则：和 Python 版同样的判断", () => {
   assert.equal(v("unemployed", true, { employed_now: true }), "no");
   assert.equal(v("year", false), "yes");
   assert.equal(v("year", true), "no");
+  assert.equal(v("year_window", false, { graduate_year: 2024, employed_now: true }), "yes");
+  assert.equal(v("year_window", false, { graduate_year: 2023 }), "no");
+  assert.equal(v("year_window", true, { graduate_year: 2024 }), "no");
+  assert.equal(v("year_window", true, { graduate_year: 2025 }), "yes");
   assert.equal(v("unplaced", true), "maybe");
   assert.equal(v("unplaced", true, { had_any_job: false }), "yes");
   assert.equal(v("year", true, { fresh: "yes" }), "yes");

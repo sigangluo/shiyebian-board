@@ -123,6 +123,12 @@ class FreshRules(unittest.TestCase):
         self.assertEqual(self.v("year", 2026), "yes")                                # 本批次：2026 年毕业算应届
         self.assertEqual(self.v("year", 2026, closed=True), "no")                    # 下一批换成 2027 届
 
+    def test_hangzhou_year_window_ignores_employment(self):  # 2024、2025、2026 年毕业生都算，公告没提在职
+        self.assertEqual(self.v("year_window", 2026, graduate_year=2024, employed_now=True), "yes")
+        self.assertEqual(self.v("year_window", 2026, graduate_year=2023), "no")
+        self.assertEqual(self.v("year_window", 2026, closed=True, graduate_year=2024), "no")  # 下一批顺延为 2025–2027
+        self.assertEqual(self.v("year_window", 2026, closed=True, graduate_year=2025), "yes")
+
     def test_guangdong_unplaced_is_ambiguous_for_those_who_worked(self):
         self.assertEqual(self.v("unplaced", 2026), "yes")                            # 当届、非在职
         self.assertEqual(self.v("unplaced", 2026, closed=True), "maybe")             # 往届：入职过又离职，算不算「落实」没写
@@ -169,6 +175,11 @@ class Gender(unittest.TestCase):
     def test_extra_fields_are_checked(self):          # 上海 / 江苏：限女性写在「其它条件原文」里
         j = job(extra={"其它条件原文": "所在部门系全部为女性的巾帼文明岗，需与女同事双岗值守夜班，限女性"})
         self.assertEqual(evaluate(j, {**ME, "gender": "男"})["status"], "no")
+
+    def test_gender_column(self):                    # 杭州：单独一列，取值就是「男」「女」，「不限制」不算限定
+        self.assertEqual(evaluate(job(extra={"性别要求": "男"}), {**ME, "gender": "女"})["status"], "no")
+        self.assertEqual(evaluate(job(extra={"性别要求": "女"}), {**ME, "gender": "女"})["status"], "ok")
+        self.assertEqual(evaluate(job(extra={"性别要求": "不限制"}), {**ME, "gender": "女"})["status"], "ok")
 
 
 class English(unittest.TestCase):

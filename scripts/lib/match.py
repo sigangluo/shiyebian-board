@@ -47,7 +47,15 @@ _MALE = re.compile(r"限男|仅限男|只限男|男性岗位|入住男生宿舍|
 
 def gender_restriction(job):
     """岗位文字里明确限定性别 -> '女' / '男' / ''。男女两种写法都出现（如「男女分设」）算没有限定。
-    看岗位职责、其他条件、部门和岗位表里其他信息（如「其它条件原文」）。"""
+
+    岗位表有单独的「性别要求」列、且取值就是男 / 女（杭州写成「男」「女」，「不限制」不算）时，直接用这一列。
+    否则看岗位职责、其他条件、部门和岗位表里其他信息（如「其它条件原文」）。
+    """
+    raw = ((job.get("extra") or {}).get("性别要求") or "").strip()
+    if raw in ("男", "男性", "限男", "限男性"):
+        return "男"
+    if raw in ("女", "女性", "限女", "限女性"):
+        return "女"
     text = " ".join([job["duty"], job["other"], job["dept"]] + list(job["extra"].values()))
     f, m = bool(_FEMALE.search(text)), bool(_MALE.search(text))
     return "女" if f and not m else "男" if m and not f else ""
@@ -193,7 +201,8 @@ def fresh_verdict(profile, rule):
 
     各地对「应届」的定义不同（要从公告里读，写在批次的 fresh_rule 里）：
       year          按毕业年份：应届 = 当年毕业（浙江省属）
-      unemployed    毕业 window 年内，且报名时无工作单位（江苏）
+      year_window   毕业 window 年内（含当年）都算应届，不看是否在职（杭州：2024–2026 年毕业生）
+      unemployed    毕业 window 年内，且报名时无工作单位（江苏、南京、苏州）
       no_staff_job  毕业 window 年内（含毕业当年），且没有在编制内工作过——私企工作不影响（上海）
       unplaced      当年毕业且非在职；往届 window 年内的要「未落实工作单位」，入职过又离职算不算落实公告没写（广东、深圳）
     规则里 cohort 是该批次「应届」对应的毕业年份；批次已经结束的（rule['closed']），假设下一批规则不变、届别顺延一年。
@@ -211,6 +220,10 @@ def fresh_verdict(profile, rule):
     employed = bool(profile.get("employed_now"))
     if kind == "year":
         return ("yes" if gy == c else "no"), f"该批次按毕业年份判断：应届 = {c} 年毕业，考生为 {gy} 年毕业{tail}"
+    if kind == "year_window":
+        lo = c - window
+        return (("yes" if lo <= gy <= c else "no"),
+                f"该批次应届含 {lo}–{c} 年毕业，不看是否在职，考生为 {gy} 年毕业{tail}")
     if not c - window <= gy <= c:
         return "no", f"该批次应届限毕业 {window} 年内（{c - window}–{c} 年毕业），考生为 {gy} 年毕业{tail}"
     if kind == "unemployed":

@@ -13,6 +13,7 @@ scripts/update.py        入口：并行抓取 + 合并
 scripts/fetch_region.py  抓取单个地区 → 校验 → 写 data/<key>/<批次>.csv
 scripts/build.py         data/*/*.csv → site/data（全部岗位，**不筛选**；有 profile.json 时只打印摘要并生成仅限本机的 profile.local.json）
 scripts/publish.py       用 build.py --public 构建到临时目录，检查不含个人条件，再发布到 gh-pages
+site/prep.html           备考指南（流程、各批次考试与成绩摘要、复习和面试建议）；assets/prep.js 渲染批次部分，assets/exam.js 是摘要的共用渲染
 scripts/lib/             schema.py（统一岗位格式）、match.py（Python 版匹配规则）、export.py（导出成前端格式 + 解析字段）、conditions.py（拆「其它条件」）、normalize.py（统一写法）、xlsx.py、http.py、regions.py（自动发现）
 site/assets/match.js     JS 版匹配规则（浏览器里用）；assets/app.js 是界面；picker.js 可搜索的选择控件；options.js 表单选项逻辑（纯函数，node 测试）；options.json 选项数据（scripts/build_options.py 从教育部目录生成，已提交）
 tests/golden/cases.json  Python 版算出的「岗位 + 条件 → 结果」样例，JS 测试逐条核对
@@ -36,6 +37,8 @@ site/                    静态看板；site/data/ 全是生成物，不要手�
 - **专业按代码前缀比对**：岗位写 A08 涵盖 A0812 → 符合；岗位写得比用户更细（A081201）→ 待确认；只有名称又对不上 → 待确认，不判不符。
 - **批次有状态**：有 `signup_start/end` 就按**今天的日期**（前端在浏览器里算，不是构建日期）算报名中 / 即将开始 / 已结束；没有就是滚动招聘。已结束的批次保留，作往年参考，并按去年同期推算下一批。
 - **只抓官方网站的公开信息**，岗位要求照抄原文，不改写。
+- **每个批次都要写 `exam_info`（考试与成绩摘要）**：笔试科目 / 时间、入围面试规则、面试、总成绩计算、体检至聘用、需要留意的事项，加上 `sources`（官方页面，https）和 `checked`（核对日期）。**只依据官方公告 / 大纲原文**；公告没写的写「公告未写明」，不要用第三方培训机构的说法补（它们常把往年的题型当成官方口径）。格式由 `lib/regions.py` 的 `check_exam_info` 校验，`tests/test_regions.py` 要求所有批次都有。内容会显示在批次卡片（`assets/exam.js`）和备考指南 `site/prep.html`。
+- **备考指南 `prep.html` 里不写地区名**：各批次的考试差异全部来自 `exam_info`，页面运行时从 `data/index.json` 渲染；静态正文只写各地共通的流程和**标明「非官方」的一般性建议**。新增地区时不需要改这个页面。
 
 ## 用户说「更新一下数据」时
 

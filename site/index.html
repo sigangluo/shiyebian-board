@@ -19,7 +19,10 @@ try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") 
       <h1>事业编岗位看板</h1>
       <p class="sub" id="generated">加载中…</p>
     </div>
-    <button type="button" id="theme" class="theme-btn" title="切换外观：跟随系统 / 浅色 / 深色"></button>
+    <div class="top-actions">
+      <a class="navlink" href="prep.html">备考指南</a>
+      <button type="button" id="theme" class="theme-btn" title="切换外观：跟随系统 / 浅色 / 深色"></button>
+    </div>
   </div>
 </header>
 
@@ -160,6 +163,7 @@ try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") 
 
 <script src="assets/match.js"></script>
 <script src="assets/options.js"></script>
+<script src="assets/exam.js"></script>
 <script src="assets/picker.js"></script>
 <script src="assets/app.js"></script>
 </body>

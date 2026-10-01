@@ -269,6 +269,7 @@ function renderBatches() {
         h("p", { class: "meta", text: mine == null ? `岗位表共 ${b.total} 个` : `符合条件 ${mine} 个（符合 + 待确认）/ 岗位表共 ${b.total} 个` }),
         b.next ? h("p", { class: "meta", text: `预计下一批报名：${b.next[0]} 至 ${b.next[1]} 前后（依本年度推算）` }) : null,
         b.fresh_note ? h("details", {}, h("summary", { text: "公告对「应届」的认定" }), h("p", { text: b.fresh_note })) : null,
+        b.exam_info ? h("details", {}, h("summary", { text: "考试与成绩（官方公告摘要）" }), ExamInfo.node(b.exam_info), h("p", { class: "exam-more" }, h("a", { href: "prep.html", text: "查看备考指南" }))) : null,
         h("div", { class: "links" },
           h("button", { type: "button", class: "linkbtn", text: F.batch === key ? "取消仅看本批次" : "仅看本批次",
             onclick: () => { F.batch = F.batch === key ? "" : key; page = 0; renderBatches(); render(); } }),

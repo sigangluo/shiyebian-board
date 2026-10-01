@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.env
+*.token
+
+# 个人条件：筛选结果会带出你的学历、专业、工作经历等，不要进仓库
+/profile.json
+
+# 抓取和生成的数据（岗位表原件、解析后的 CSV、看板数据）
+/raw/
+/data/
+/site/data/

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>事业编岗位看板</title>
+<meta name="description" content="汇总各地人社部门公布的事业单位公开招聘岗位，按个人条件筛选可报考的岗位。个人条件仅保存在本浏览器。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232459d3'/%3E%3Cpath d='M9 17l5 5 9-11' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+// 在页面绘制前就应用保存的主题，避免先闪一下浅色。localStorage 可能不可用（隐私模式等），读不到就跟随系统。
+try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-row">
+    <div>
+      <h1>事业编岗位看板</h1>
+      <p class="sub" id="generated">加载中…</p>
+    </div>
+    <div class="top-actions">
+      <a class="navlink" href="prep.html">备考指南</a>
+      <button type="button" id="theme" class="theme-btn" title="切换外观：跟随系统 / 浅色 / 深色"></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <noscript><p class="banner">需要启用 JavaScript 才能显示看板。</p></noscript>
+  <p class="banner" id="error" hidden></p>
+
+  <section id="profileSec" class="panel">
+    <details id="profileDetails" open>
+      <summary><h2>我的条件</h2><span class="muted" id="profileStatus"></span></summary>
+      <p class="muted">所填条件<b>仅保存在本浏览器，不会上传至任何服务器</b>。标注「必填」的为必须填写项，其余选填；未填写的项不参与筛选，仅在岗位详情中提示。</p>
+      <form id="profileForm" onsubmit="return false" autocomplete="off">
+        <fieldset>
+          <legend>基本情况</legend>
+          <label><span class="lab">最高学历<span class="req">必填</span></span><select id="pEdu">
+            <option value="">请选择</option><option>大专</option><option>本科</option><option>硕士</option><option>博士</option></select></label>
+          <label><span class="lab">最高学历的毕业年份<span class="req rec">建议填写</span></span><select id="pGradYear"></select></label>
+          <label>户籍所在地<span class="pair"><select id="pProv" aria-label="户籍所在省"></select><select id="pCity" aria-label="户籍所在市"></select></span></label>
+          <label class="span2">毕业后的工作情况<select id="pWork"></select></label>
+          <label id="pWorkMonthsBox" hidden>累计工作时长（月）<input id="pWorkMonths" type="number" min="0" max="600" placeholder="如 3"></label>
+          <p class="hint">各地对「应届毕业生」的认定口径不一：有的按毕业年份，有的按报名时是否有工作单位，有的按是否在编制内工作过，故需填写工作情况。各批次卡片中摘录了公告原文。</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>专业</legend>
+          <p class="hint" id="majorNeedEdu">请先选择最高学历，随后显示对应的专业选择项。</p>
+          <div class="field wide" id="gradBox" hidden><span class="lab">研究生专业（按学科专业目录选择）</span><div id="pGradPick"></div></div>
+          <div class="field wide" id="bachBox" hidden><span class="lab" id="bachLab">本科专业</span><div id="pBachPick"></div></div>
+          <div class="field wide" id="collBox" hidden><span class="lab">大专专业</span><div id="pCollPick"></div></div>
+          <p class="hint" id="majorHint" hidden>可输入专业名称或代码检索，也可按学科门类浏览；选中后以标签显示，支持多选（如学术学位与专业学位并选，或双学位）。</p>
+        </fieldset>
+
+        <details class="more">
+          <summary>更多条件（选填，填写后筛选更精确）</summary>
+          <fieldset>
+            <legend>个人情况</legend>
+            <label>年龄（周岁）<select id="pAge"></select></label>
+            <label>性别<select id="pGender"><option value="">不填</option><option>男</option><option>女</option></select></label>
+            <label>政治面貌<select id="pPol"><option value="">不填</option><option>群众</option><option>共青团员</option><option>中共党员</option></select></label>
+            <label>大学英语<select id="pEnglish"><option value="">不填</option><option value="CET4">已通过四级</option><option value="CET6">已通过六级</option></select></label>
+            <div class="field wide"><span class="lab">已取得的资格证书</span><div id="pCertPick"></div></div>
+            <div class="field wide"><span class="lab">持有有效居住证的城市（上海等地对外省市户籍有居住证要求）</span><div id="pResPick"></div></div>
+          </fieldset>
+        </details>
+
+        <details class="more">
+          <summary>高级设置</summary>
+          <fieldset>
+            <legend>应届身份认定</legend>
+            <label>认定方式<select id="pFresh">
+              <option value="auto">按各批次公告规则自动推断（推荐）</option><option value="yes">一律按应届</option>
+              <option value="no">一律按往届</option><option value="maybe">一律待定（限应届岗位均列入待确认）</option></select></label>
+            <label class="check"><input id="pSpecial" type="checkbox"> 保留专项招聘岗位</label>
+            <p class="hint">专项招聘指面向退役军人、基层服务项目人员、残疾人等特定群体的岗位，一般无需勾选。</p>
+          </fieldset>
+          <fieldset id="termsSet">
+            <legend>专业匹配词（选择专业时自动生成）</legend>
+            <p class="hint">部分岗位表（如上海、江苏）仅有专业文字、无专业代码：出现<b>对口关键词</b>视为对口，出现<b>相关词</b>列入待确认。更换专业后将重新生成；此处手动修改的内容仅在不更换专业时保留。</p>
+            <label data-lv="graduate">研究生：对口关键词<input id="pGradKw"></label>
+            <label data-lv="graduate">研究生：相关词<input id="pGradRel"></label>
+            <label data-lv="bachelor">本科：对口关键词<input id="pBachKw"></label>
+            <label data-lv="bachelor">本科：相关词<input id="pBachRel"></label>
+          </fieldset>
+        </details>
+
+        <div class="profile-actions">
+          <button type="button" id="pImport">导入 JSON</button>
+          <button type="button" id="pExport">导出 JSON</button>
+          <button type="button" id="pLocal" hidden>载入本机 profile.json</button>
+          <button type="button" id="pClear">清空条件</button>
+          <input id="pFile" type="file" accept="application/json,.json" hidden>
+        </div>
+      </form>
+    </details>
+  </section>
+
+  <section id="filterInfo" class="panel" hidden>
+    <h2>筛选情况</h2>
+    <p id="filterText"></p>
+    <p class="muted" id="filterUnset"></p>
+    <p class="muted" id="filteredOut"></p>
+  </section>
+
+  <p class="banner" id="staleBanner" hidden></p>
+
+  <section id="calendarSec" hidden>
+    <h2>下一批什么时候开</h2>
+    <p class="muted">按各批次上一年度的报名时间顺延一年推算，<b>仅为推测</b>：多数地区每年固定时段集中招聘，但具体日期乃至是否招聘，均以官方公告为准。</p>
+    <ul class="calendar" id="calendar"></ul>
+  </section>
+
+  <section>
+    <h2>批次</h2>
+    <div class="batches" id="batches"></div>
+  </section>
+
+  <section id="statsSec" class="panel">
+    <details id="statsDetails">
+      <summary><h2>数据概览</h2><span class="muted">岗位在学历、专业、考生类别等方面的分布，随下方筛选变化</span></summary>
+      <div class="stat-tiles" id="statTiles"></div>
+      <div class="stat-ctl">
+        <span class="muted">条形长度按</span>
+        <label><input type="radio" name="sMetric" value="jobs" checked>岗位数</label>
+        <label><input type="radio" name="sMetric" value="heads">招聘人数</label>
+        <span class="stat-chips" id="statChips"></span>
+      </div>
+      <div class="stat-grid" id="statGrid"></div>
+      <p class="muted stat-foot">点击任一条可只看这一类岗位，下方表格同步筛选；再点一次取消。每张图统计时不含它自己的筛选，方便在同一张图里比较各类。数据来自岗位表原文的自动解析，仅作整体参考；岗位表只有招聘人数，没有报名人数，不能据此判断竞争程度。</p>
+    </details>
+  </section>
+
+  <section>
+    <h2>岗位 <span class="count" id="count"></span></h2>
+    <form class="filters" id="filters" onsubmit="return false">
+      <label>匹配度<select id="fMatch"></select></label>
+      <label>报名状态<select id="fStatus"></select></label>
+      <label>专业对口<select id="fMajor"></select></label>
+      <label>地区<select id="fRegion"></select></label>
+      <label>城市<select id="fCity"></select></label>
+      <label>考生类别<select id="fFresh"></select></label>
+      <label>报考学历<select id="fLower"></select></label>
+      <label>考试方式<select id="fExam"></select></label>
+      <label class="grow">搜索<input id="fQuery" type="search" placeholder="单位、部门、职责、专业"></label>
+      <button type="button" id="reset">清空筛选</button>
+      <button type="button" id="exportCsv">导出当前结果 CSV</button>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>招聘单位 / 部门</th><th>城市</th><th>学历</th><th>专业要求</th><th class="num">人数</th>
+          <th>考生类别</th><th>匹配</th><th>状态</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="empty" hidden>没有符合当前筛选的岗位。</p>
+    <nav class="pager" id="pager" aria-label="岗位分页" hidden></nav>
+  </section>
+
+  <footer class="foot">
+    <p>数据来源于各地人社部门公布的事业单位招聘公告及岗位表，<b>版权归原发布单位所有</b>，本项目仅作整理，仅供参考。岗位是否仍在招聘、具体条件均以官方公告为准，报名前请务必核对原文。</p>
+    <p>「符合 / 待确认 / 不符」依据岗位表原文与所填条件自动判定：专业按专业代码比对，学历、年龄、工作经历按原文解析，应届身份按各批次公告中的定义推断，个别写法特殊的岗位可能存在误判。<b>请以官方公告及招聘单位的答复为准。</b></p>
+    <p>所填条件仅保存在本浏览器（localStorage）中，全部筛选均在本页完成，不向服务器发送任何数据。</p>
+  </footer>
+</main>
+
+<dialog id="detail">
+  <article>
+    <header><h3 id="dTitle"></h3><button type="button" id="dClose" aria-label="关闭">×</button></header>
+    <div id="dBody"></div>
+  </article>
+</dialog>
+
+<script src="assets/match.js"></script>
+<script src="assets/options.js"></script>
+<script src="assets/exam.js"></script>
+<script src="assets/stats.js"></script>
+<script src="assets/picker.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -42,7 +42,8 @@ META = dict(
             notice_url="https://example.com/notice",   # 公告页，必须 https://；岗位没有单独链接时看板指向这里
             table_url="https://example.com/table.xlsx",
             min_jobs=100,                   # 岗位数下限，少于它就当作抓取 / 解析不全（可省略）
-            fresh_note="",                  # 公告里对「应届」的定义（原文摘要）。这对往届生最重要，一定要读公告写清楚
+            fresh_src="招聘公告",           # 「应届」认定的出处：公告 / 公告附件的名称和条款
+            fresh_note="",               # 公告里对「应届」的定义（原文摘要）。这对往届生最重要，一定要读公告写清楚
         ),
     },
 )

@@ -48,6 +48,11 @@ h2 { margin: 28px 0 10px; font-size: 17px; }
 .batch details { margin-top: 8px; font-size: 13px; }
 .batch summary { cursor: pointer; color: var(--accent); }
 .batch details p { margin: 6px 0 0; color: var(--muted); }
+.note-list { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+.note-list li { margin: 4px 0; }
+.note-list ul { margin: 2px 0; padding-left: 16px; list-style: none; }
+.batch details p.note-src { font-size: 12.5px; }
+.note-list strong { color: var(--text, inherit); }
 a, .linkbtn { color: var(--accent); }
 .linkbtn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: underline; }
 

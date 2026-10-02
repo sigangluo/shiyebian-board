@@ -22,6 +22,21 @@ function h(tag, props = {}, ...kids) {
   for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
   return e;
 }
+// 公告摘录（fresh_note）是一整段话：按句号拆成要点，「① ② ③」拆成子项，**…** 渲染成粗体。仍然只用文本节点。
+function inline(text) {
+  return text.split(/\*\*(.+?)\*\*/).map((t, i) => (i % 2 ? h("strong", { text: t }) : t));
+}
+function noteList(text) {
+  const items = text.split("。").map((x) => x.trim()).filter(Boolean).map((sent) => {
+    const parts = sent.split(/(?=[①-⑩])/).map((x) => x.trim().replace(/[；;]$/, "")).filter(Boolean);
+    if (parts.length < 3 || !/^[①-⑩]/.test(parts[1])) return h("li", {}, inline(sent));
+    return h("li", {}, inline(parts[0]), h("ul", {}, parts.slice(1).map((x) => h("li", {}, inline(x)))));
+  });
+  return h("ul", { class: "note-list" }, items);
+}
+function noteSrc(b) {
+  return h("p", { class: "note-src" }, "依据：", b.fresh_src || "招聘公告", link(b.notice_url, "官方公告页") ? " · " : null, link(b.notice_url, "官方公告页"));
+}
 const safeUrl = (u) => (typeof u === "string" && u.startsWith("https://") ? u : "");
 const link = (href, text) => (safeUrl(href) ? h("a", { href, target: "_blank", rel: "noopener noreferrer", text }) : null);
 const badge = (cls, text) => h("span", { class: `badge ${cls}`, text });
@@ -268,7 +283,7 @@ function renderBatches() {
         h("p", { class: "meta", text: `${when}${b.exam ? "　" + b.exam : ""}　公告发布 ${b.published}` }),
         h("p", { class: "meta", text: mine == null ? `岗位表共 ${b.total} 个` : `符合条件 ${mine} 个（符合 + 待确认）/ 岗位表共 ${b.total} 个` }),
         b.next ? h("p", { class: "meta", text: `预计下一批报名：${b.next[0]} 至 ${b.next[1]} 前后（依本年度推算）` }) : null,
-        b.fresh_note ? h("details", {}, h("summary", { text: "公告对「应届」的认定" }), h("p", { text: b.fresh_note })) : null,
+        b.fresh_note ? h("details", {}, h("summary", { text: "公告对「应届」的认定" }), noteList(b.fresh_note), noteSrc(b)) : null,
         b.exam_info ? h("details", {}, h("summary", { text: "考试与成绩（官方公告摘要）" }), ExamInfo.node(b.exam_info), h("p", { class: "exam-more" }, h("a", { href: "prep.html", text: "查看备考指南" }))) : null,
         h("div", { class: "links" },
           h("button", { type: "button", class: "linkbtn", text: F.batch === key ? "取消仅看本批次" : "仅看本批次",
@@ -422,7 +437,7 @@ function showDetail(j) {
     h("dl", {}, fields.flatMap(([k, v]) => [h("dt", { text: k }), h("dd", { text: v })])),
     h("div", { class: "note note-info" },
       `${r.name} · ${b.name}　`, link(j.u || b.notice_url, j.u ? "岗位页面" : "官方公告"),
-      b.fresh_note ? h("p", { text: "应届认定：" + b.fresh_note }) : null),
+      b.fresh_note ? h("div", {}, h("p", { text: b.fresh_src ? `应届认定（依据：${b.fresh_src}）：` : "应届认定：" }), noteList(b.fresh_note)) : null),
   ].filter(Boolean));     // replaceChildren(null) 会把 "null" 当成文本插进去
   $("#detail").showModal();
 }

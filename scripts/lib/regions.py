@@ -54,6 +54,9 @@ def _check_batches(key, batches):
         fr = b.get("fresh_rule")
         if fr is not None and (fr.get("kind") not in FRESH_KINDS or not isinstance(fr.get("cohort"), int)):
             raise RuntimeError(f"regions/{key} 批次 {bk} 的 fresh_rule 要写成 dict(kind=…, cohort=2026[, window=2])，kind 只能是 {FRESH_KINDS}")
+        ad = b.get("age_default")
+        if ad is not None and not (isinstance(ad, dict) and all(isinstance(ad.get(k), int) for k in ("max", "relaxed")) and ad["max"] <= ad["relaxed"]):
+            raise RuntimeError(f"regions/{key} 批次 {bk} 的 age_default 要写成 dict(max=38, relaxed=43)（relaxed 不小于 max）")
         if b.get("exam_info") is not None:
             check_exam_info(f"regions/{key} 批次 {bk}", b["exam_info"])
         if bool(b.get("signup_start")) != bool(b.get("signup_end")):

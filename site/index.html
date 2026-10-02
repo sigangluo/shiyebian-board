@@ -119,6 +119,21 @@ try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") 
     <div class="batches" id="batches"></div>
   </section>
 
+  <section id="statsSec" class="panel">
+    <details id="statsDetails">
+      <summary><h2>数据概览</h2><span class="muted">岗位在学历、专业、考生类别等方面的分布，随下方筛选变化</span></summary>
+      <div class="stat-tiles" id="statTiles"></div>
+      <div class="stat-ctl">
+        <span class="muted">条形长度按</span>
+        <label><input type="radio" name="sMetric" value="jobs" checked>岗位数</label>
+        <label><input type="radio" name="sMetric" value="heads">招聘人数</label>
+        <span class="stat-chips" id="statChips"></span>
+      </div>
+      <div class="stat-grid" id="statGrid"></div>
+      <p class="muted stat-foot">点击任一条可只看这一类岗位，下方表格同步筛选；再点一次取消。每张图统计时不含它自己的筛选，方便在同一张图里比较各类。数据来自岗位表原文的自动解析，仅作整体参考；岗位表只有招聘人数，没有报名人数，不能据此判断竞争程度。</p>
+    </details>
+  </section>
+
   <section>
     <h2>岗位 <span class="count" id="count"></span></h2>
     <form class="filters" id="filters" onsubmit="return false">
@@ -164,6 +179,7 @@ try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") 
 <script src="assets/match.js"></script>
 <script src="assets/options.js"></script>
 <script src="assets/exam.js"></script>
+<script src="assets/stats.js"></script>
 <script src="assets/picker.js"></script>
 <script src="assets/app.js"></script>
 </body>

@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from lib.export import export_job
-from lib.match import evaluate
+from lib.match import batch_rule, evaluate
 from lib.regions import discover
 from lib.schema import read_jobs
 
@@ -56,7 +56,7 @@ def main():
             for feat in FEATURES:                              # 每个解析字段至少抽几个有值的，保证各分支都有样例
                 have = [j for j, e in exported if feat in e]
                 pick |= {id(j) for j in random.sample(have, min(PER_FEATURE, len(have)))}
-            fr = b.get("fresh_rule")
+            fr = batch_rule(b)
             for i, p in enumerate(PROFILES):                    # 每组条件再各抽几个「没被筛掉」的，保证符合 / 待确认的分支也有足够样例
                 rule = {**fr, "closed": i % 2 == 0} if fr else None
                 have = [j for j in allj if evaluate(j, p, rule)["status"] != "no"]
@@ -65,8 +65,7 @@ def main():
                 if id(j) in pick:
                     jobs.append(e)
                     raw.append(j)
-            fr = b.get("fresh_rule")
-            rules[f"{r.key}/{bkey}"] = fr
+            rules[f"{r.key}/{bkey}"] = batch_rule(b)
     expected = []
     for i, p in enumerate(PROFILES):
         closed = i % 2 == 0             # 偶数号条件按「批次已结束」算（届别顺延一年），奇数号按「还没结束」算

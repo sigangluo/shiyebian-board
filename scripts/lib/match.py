@@ -180,7 +180,7 @@ def parse_max_age(text):
     """'18-38周岁' / '35周岁以下' / '放宽到40周岁' -> 38 / 35 / 40；认不出来 -> None。"""
     t = text or ""
     m = (re.search(r"\d+\s*[-—~～至]\s*(\d+)\s*周?岁", t) or re.search(r"(\d+)\s*周?岁\s*(?:及)?以下", t)
-         or re.search(r"(\d+)\s*周岁", t))
+         or re.search(r"(\d+)\s*周岁(?!\s*(?:及)?以上)", t))     # 「18周岁以上」是下限，不是上限
     return int(m.group(1)) if m else None
 
 
@@ -190,11 +190,27 @@ def parse_relaxed_age(text):
     return int(m.group(1)) if m else None
 
 
+_AFTER_HIRE = re.compile(r"(录用|聘用|入职|上岗)后")
+_CERT_NOTE = re.compile(r"提供|复审|审核")
+
+
 def split_list(text):
     return [x.strip() for x in re.split(r"[,，、;；\n]+", text or "") if x.strip()]
 
 
 # ---------- 应届身份：每个批次有自己的规则 ----------
+
+def batch_rule(b):
+    """批次 META -> 传给 evaluate() 的批次规则（不含 closed，由调用方按批次状态加）。没有任何规则返回 None。
+
+    fresh_rule：应届身份的认定（见 fresh_verdict）。age_default：岗位表没写年龄要求时公告的统一规定，
+    形如 dict(max=38, relaxed=43)，只用来提醒，不据此直接判不符（公告里常有放宽的特殊情形）。
+    """
+    fr, ad = b.get("fresh_rule"), b.get("age_default")
+    if not fr and not ad:
+        return None
+    return {**(fr or {}), **({"age_default": ad} if ad else {})}
+
 
 def fresh_verdict(profile, rule):
     """这个批次里，你算不算应届 -> ('yes' | 'no' | 'maybe', 一句话说明)。
@@ -212,7 +228,7 @@ def fresh_verdict(profile, rule):
     if pf in ("yes", "no"):
         return pf, f"按所设定的应届身份（{'应届' if pf == 'yes' else '往届'}）"
     gy = profile.get("graduate_year")
-    if pf == "maybe" or not rule or gy is None:
+    if pf == "maybe" or not rule or "kind" not in rule or gy is None:
         return "maybe", "是否属于应届取决于当地认定，需查阅公告或咨询招聘单位"
     kind, window = rule["kind"], rule.get("window", 2)
     c = rule["cohort"] + (1 if rule.get("closed") else 0)
@@ -389,6 +405,12 @@ def evaluate(job, profile, fresh_rule=None):
             no.append(("age", f"年龄上限 {mx} 周岁，考生 {age} 岁"))
         elif mx is None and job["age"]:
             check.append(f"年龄要求「{job['age'][:20]}」无法识别，需核对")
+        elif mx is None and (fresh_rule or {}).get("age_default"):
+            d = fresh_rule["age_default"]
+            if age > d["relaxed"]:
+                no.append(("age", f"公告规定年龄上限 {d['max']} 周岁（部分情形最多放宽至 {d['relaxed']} 周岁），岗位表未另写，考生 {age} 岁"))
+            elif age > d["max"]:
+                check.append(f"岗位表未写年龄要求，公告规定年龄上限 {d['max']} 周岁（部分情形放宽至 {d['relaxed']} 周岁），考生 {age} 岁，需核对")
 
     # 性别：只有岗位明确限定了才筛，没填性别时只提醒
     need = gender_restriction(job)
@@ -406,8 +428,13 @@ def evaluate(job, profile, fresh_rule=None):
     # 资格证书（英语四六级单独处理：六级满足四级；没填英语等级就只提醒，不判不符）
     held = profile.get("certs") or []
     missing = []
-    for c in split_list(job["certs"]):
-        if re.search(r"英语[四六]级|CET", c):
+    after_hire = bool(_AFTER_HIRE.search(job["certs"]))
+    if after_hire:                      # 「聘用后 2 年内取得……」不是报名条件：整栏只提醒，不逐项比对
+        check.append(f"资格证书要求「{job['certs'][:40]}」，其中写明聘用后取得，需核对")
+    for c in [] if after_hire else split_list(job["certs"]):
+        if _CERT_NOTE.search(c):        # 「资格审核时提供相关证明文件」这类是说明，不是证书
+            check.append(f"资格证书一栏写的是说明「{c[:30]}」，需核对")
+        elif re.search(r"英语[四六]级|CET", c):
             need = 6 if ("六级" in c and U >= 3) or ("四级" not in c) else 4
             have = profile.get("english")
             if have is None:
@@ -429,8 +456,7 @@ def evaluate(job, profile, fresh_rule=None):
     if pol:
         if mine_pol is None:
             check.append(f"政治面貌要求「{pol}」，未填写政治面貌")
-        elif ("党员" in pol and "党员" not in mine_pol) or ("团员" in pol and "党员" not in pol
-                                                        and not any(x in mine_pol for x in ("党员", "团员"))):
+        elif ("党员" in pol or "团员" in pol) and not ("党员" in mine_pol or ("团员" in pol and "团员" in mine_pol)):
             no.append(("politics", f"政治面貌要求「{pol}」，考生为{mine_pol}"))
 
     # 户籍：明确写「限……户籍」「须具有……户籍 / 居住证」的，和你的户籍对不上就是不符；其他写法只提醒

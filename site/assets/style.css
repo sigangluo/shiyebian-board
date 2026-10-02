@@ -247,3 +247,31 @@ dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .sources li { overflow-wrap: anywhere; }
 .plan td { white-space: normal; }          /* 覆盖岗位表里 td:nth-child(2) 的不换行规则 */
 @media (max-width: 600px) { .plan th, .plan td { display: block; width: auto; border-bottom: 0; padding: 6px 4px 0; } .plan td { border-bottom: 1px solid var(--line); padding-bottom: 8px; } }
+
+/* 数据概览 */
+#statsSec summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; list-style: none; }
+#statsSec summary::-webkit-details-marker { display: none; }
+#statsSec summary h2 { display: inline; margin: 10px 0; }
+#statsSec summary h2::before { content: "▸ "; color: var(--muted); }
+#statsSec details[open] > summary h2::before { content: "▾ "; }
+.stat-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 6px 0 12px; }
+.tile { flex: 1 1 140px; background: var(--accent-bg); border-radius: var(--radius); padding: 8px 14px; }
+.tile-num { font-size: 22px; font-weight: 600; line-height: 1.3; }
+.tile-key { font-size: 12.5px; color: var(--muted); }
+.stat-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; margin-bottom: 10px; }
+.stat-ctl label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.stat-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.stat-chip { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 10px; font: inherit; font-size: 12.5px; line-height: 22px; cursor: pointer; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.stat-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 14px 10px; }
+.stat-card h3 { margin: 4px 0 2px; font-size: 14.5px; }
+.stat-note { margin: 0 0 6px; font-size: 12px; }
+.bars { display: flex; flex-direction: column; gap: 2px; }
+.bar { display: grid; grid-template-columns: 8.5em 1fr 6.5em; align-items: center; gap: 8px; width: 100%; padding: 3px 4px; border: 1px solid transparent; border-radius: 6px; background: none; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.bar:hover { background: var(--accent-bg); }
+.bar.on { border-color: var(--accent); background: var(--accent-bg); }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 10px; border-radius: 5px; background: var(--off-bg); overflow: hidden; }
+.bar-fill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 5px; }
+.bar-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.stat-foot { font-size: 12.5px; margin: 10px 0 0; }

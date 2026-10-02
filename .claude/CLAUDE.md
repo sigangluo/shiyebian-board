@@ -15,6 +15,7 @@ scripts/build.py         data/*/*.csv → site/data（全部岗位，**不筛选
 scripts/publish.py       用 build.py --public 构建到临时目录，检查不含个人条件，再发布到 gh-pages
 site/prep.html           备考指南（流程、各批次考试与成绩摘要、复习和面试建议）；assets/prep.js 渲染批次部分，assets/exam.js 是摘要的共用渲染
 scripts/lib/             schema.py（统一岗位格式）、match.py（Python 版匹配规则）、export.py（导出成前端格式 + 解析字段）、conditions.py（拆「其它条件」）、normalize.py（统一写法）、xlsx.py、http.py、regions.py（自动发现）
+site/assets/stats.js     「数据概览」的纯逻辑（按学历 / 专业 / 考生类别 / 经历 / 年龄上限 / 地区分桶统计，只用 export.py 已解析好的字段，node 测试）；图表由 app.js 画成 CSS 条形，点击即设成筛选条件
 site/assets/match.js     JS 版匹配规则（浏览器里用）；assets/app.js 是界面；picker.js 可搜索的选择控件；options.js 表单选项逻辑（纯函数，node 测试）；options.json 选项数据（scripts/build_options.py 从教育部目录生成，已提交）
 tests/golden/cases.json  Python 版算出的「岗位 + 条件 → 结果」样例，JS 测试逐条核对
 profile.json             可选，个人条件，只在本机，已被 .gitignore；profile.example.json 是模板
@@ -26,6 +27,7 @@ site/                    静态看板；site/data/ 全是生成物，不要手�
 
 - **服务端（构建时）不筛选，个人条件只在浏览器里。** 公开站点包含全部岗位；访问者在「我的条件」表单里填条件，存在 localStorage，筛选在 `site/assets/match.js` 里完成，没有任何数据上传。**绝不能把个人条件写进公开发布的文件**：`build.py --public` 不读 `profile.json`，`publish.py` 还会检查发布目录。
 - **解析和比较分开，匹配规则有两份。** 文字解析（学历、专业代码、经历年限、年龄上限、考生类别、户籍写法……）只在 Python 里做，结果由 `lib/export.py` 导出成岗位上的字段（字段说明在该文件开头）；`match.js` 只做「岗位字段 vs 你的条件」的比较，是 `match.py` 里 `evaluate()` 的逐段移植，**提示文字、判断顺序必须一致**。改规则要两边一起改，然后 `python3 tests/make_golden.py` 重新生成交叉测试样例，再 `node --test` 核对（样例里有 2940 条，一个字的提示差异都会报错）。加新的解析字段：先在 `export.py` 导出，再让 `match.py` 和 `match.js` 都用它。
+- **岗位表没写年龄、但公告有统一规定的批次**（江苏、南京、苏州），在批次 META 里写 `age_default=dict(max=38, relaxed=43)`（`relaxed` 取公告里放宽情形的最高上限）：超过 `max` 只提醒，超过 `relaxed` 才判不符。`match.batch_rule(b)` 把它和 `fresh_rule` 合成传给 `evaluate` 的批次规则，build.py / make_golden.py / app.js 都用这一份。
 - **三档：ok / check / no。** 宁可多放进 check，也不要把可能能报的判成 no（no 默认不出现在看板里，用户看不到就没法纠错）。页面上「匹配度」选「全部」可以看到 no 和原因，调试规则时用。
 - **没填的条件不参与筛选**（`age`、`politics`、`hukou`、本科专业……），只在页面的「尚未填写」里提示。不要替用户猜。唯一的默认值是工作情况：「尚未工作过」（看板的使用者包括没有任何工作经历的应届毕业生，Python 版里没填 = False 也是这个意思）。
 - **条件表单以选择为主，不让用户手填代码**：专业从官方目录里搜索 / 按门类选（`picker.js`），选中后由 `options.js` 的 `derive` 生成对口关键词 / 相关词（关联组在 `build_options.py` 的 `CLUSTERS`，改它不需要联网）；户籍是省 + 市下拉；证书是常见项 + 允许自填。profile 的格式不变，所以 profile.json、导入导出和 Python 版都不受影响。

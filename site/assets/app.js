@@ -46,7 +46,9 @@ const today = new URLSearchParams(location.search).get("date") || (() => { const
 
 let index, jobs = [], batchOf = {}, regionOf = {}, order = [], view = [], page = 0;
 let profile = null, profileSource = "", extraProfileKeys = {};
-const F = { match: "", status: "", major: "", region: "", city: "", fresh: "", lower: "", exam: "", q: "", batch: "" };
+const F = { match: "", status: "", major: "", region: "", city: "", fresh: "", lower: "", exam: "", q: "", batch: "",
+  edu: "", mk: "", cat: "", xp: "", age: "" };     // 后五个只能从「数据概览」的图里点选
+let statDims = [], statMetric = "jobs";
 
 // ---------- 个人条件 ----------
 
@@ -185,7 +187,8 @@ function loadSavedProfile() {
 
 function ruleOf(j) {
   const b = batchOf[`${j.r}/${j.b}`];
-  return b.fresh_rule ? { ...b.fresh_rule, closed: b.status === "closed" } : null;
+  if (!b.fresh_rule && !b.age_default) return null;
+  return { ...b.fresh_rule, ...(b.age_default ? { age_default: b.age_default } : {}), closed: b.status === "closed" };
 }
 
 function evaluateAll() {
@@ -248,7 +251,8 @@ function setupFilters() {
   });
 }
 
-function pass(j) {
+// skip：统计某个维度时不带它自己的筛选，这样点选一项后同一张图里其他项还能比较
+function pass(j, skip) {
   const b = batchOf[`${j.r}/${j.b}`], ev = j._ev;
   if (ev) {
     if (F.match === "" && ev.status === "no") return false;
@@ -257,12 +261,13 @@ function pass(j) {
   if (F.batch && F.batch !== `${j.r}/${j.b}`) return false;
   if (F.status && b.status !== F.status) return false;
   if (F.major && (!ev || ev.major !== F.major)) return false;
-  if (F.region && j.r !== F.region) return false;
+  if (F.region && skip !== "region" && j.r !== F.region) return false;
   if (F.city && j.ci !== F.city) return false;
   if (F.fresh === "fresh" && !j.fo) return false;
-  if (F.fresh === "open" && j.fo) return false;
+  if (F.fresh === "open" && (j.fo || j.zb)) return false;      // 「往届可报」不含限应届、限在编人员的岗位
   if (F.lower && (!ev || String(+ev.lower) !== F.lower)) return false;
   if (F.exam && j.ex !== F.exam) return false;
+  for (const d of statDims) if (d.key !== "region" && F[d.key] && skip !== d.key && d.of(j) !== F[d.key]) return false;
   if (F.q) {
     const hay = [j.un, j.dp, j.du, j.mg, j.mb, j.mc, j.ci].join("\n");
     if (!F.q.split(/\s+/).every((w) => hay.includes(w))) return false;
@@ -374,6 +379,55 @@ function render() {
   rows.replaceChildren(...view.slice(page * PAGE, (page + 1) * PAGE).map(row));
   $("#empty").hidden = view.length > 0;
   renderPager(pages);
+  renderStats();
+}
+
+// ---------- 数据概览 ----------
+
+const NUM = new Intl.NumberFormat("zh-CN");
+
+function setStatFilter(key, id) {
+  F[key] = F[key] === id ? "" : id;
+  if (key === "region") $("#fRegion").value = F.region;
+  page = 0;
+  render();
+}
+
+function statBar(d, r, max, total) {
+  const val = statMetric === "heads" ? r.heads : r.jobs, on = F[d.key] === r.id;
+  const pct = total ? Math.round((val / total) * 100) : 0;
+  return h("button", { type: "button", class: "bar" + (on ? " on" : ""), "aria-pressed": String(on),
+    title: `${r.label}：${NUM.format(r.jobs)} 个岗位，招聘 ${NUM.format(r.heads)} 人。点击${on ? "取消" : "只看这一类"}`,
+    onclick: () => setStatFilter(d.key, r.id) },
+    h("span", { class: "bar-label", text: r.label }),
+    h("span", { class: "bar-track" }, h("span", { class: "bar-fill", style: `width:${max ? (val / max) * 100 : 0}%` })),
+    h("span", { class: "bar-num", text: `${NUM.format(val)} · ${pct}%` }));
+}
+
+function renderStats() {
+  if (!$("#statsDetails").open) return;
+  const sum = Stats.summary(view);
+  $("#statTiles").replaceChildren(...[["岗位", sum.jobs, "个"], ["招聘人数", sum.heads, "人"], ["招聘单位", sum.units, "个"]].map(([k, v, u]) =>
+    h("div", { class: "tile" }, h("div", { class: "tile-num", text: NUM.format(v) }), h("div", { class: "tile-key", text: `${k}（${u}）` }))));
+  $("#statChips").replaceChildren(...statDims.filter((d) => F[d.key]).map((d) => {
+    const label = d.buckets.find(([id]) => id === F[d.key]);
+    return h("button", { type: "button", class: "stat-chip", title: "取消这项筛选", onclick: () => setStatFilter(d.key, F[d.key]) }, `${d.title}：${label ? label[1] : F[d.key]} ×`);
+  }));
+  $("#statGrid").replaceChildren(...statDims.map((d) => {
+    const rows = Stats.tally(order.filter((j) => pass(j, d.key)), d).filter((r) => r.jobs || F[d.key] === r.id);
+    const total = rows.reduce((a, r) => a + (statMetric === "heads" ? r.heads : r.jobs), 0);
+    const max = Math.max(0, ...rows.map((r) => (statMetric === "heads" ? r.heads : r.jobs)));
+    return h("div", { class: "stat-card" },
+      h("h3", { text: d.title }),
+      d.note ? h("p", { class: "muted stat-note", text: d.note }) : null,
+      rows.length ? h("div", { class: "bars" }, rows.map((r) => statBar(d, r, max, total))) : h("p", { class: "muted", text: "没有岗位" }));
+  }));
+}
+
+function setupStats() {
+  statDims = Stats.dims(index.regions);
+  $("#statsDetails").addEventListener("toggle", renderStats);
+  for (const r of document.querySelectorAll('input[name="sMetric"]')) r.addEventListener("change", (e) => { statMetric = e.target.value; renderStats(); });
 }
 
 // 页码条：‹ 上一页  1 … 4 [5] 6 … 20  下一页 ›，右侧是第几页和总数。只有一页时不显示
@@ -566,6 +620,7 @@ async function main() {
   profile = formToProfile();
   evaluateAll();
 
+  setupStats();
   setupFilters();
   renderCalendar();
   renderAll();

@@ -53,6 +53,7 @@ META = dict(
             table_url=HOST + "/module/download/downfile.jsp?classid=0&filename=7cc501120b7e4af988cc272660d3128b.xls",
             min_jobs=400,
             fresh_rule=dict(kind="unemployed", cohort=2026, window=2),
+            age_default=dict(max=38, relaxed=43),    # 岗位表没写年龄时，公告统一规定 38 周岁以下，部分情形放宽（招聘公告第 5 条）
             fresh_src="招聘公告",
             fresh_note=("招聘条件中的「2026年毕业生」，指在 2026 年毕业并已取得学历（学位）证书，且报名时无工作单位的人员。"
                         "2024、2025 年普通高校毕业生，如报名时无工作单位，可应聘面向 2026 年毕业生的岗位。"

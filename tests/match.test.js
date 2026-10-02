@@ -79,3 +79,32 @@ test("个人条件的校验", () => {
   assert.equal(Match.normalizeProfile({ education: "硕士", fresh: "乱写" }), null);
   assert.ok(Match.normalizeProfile({ education: "硕士" }));
 });
+
+// 全量核对时发现的几处误判（Python 版有同样的测试，见 tests/test_match.py 的 AuditFixes）
+const BASE = { id: "1", r: "x", b: "b", un: "某单位", el: 2, ep: true, fr: "不限", ag: "18-38周岁", amx: 38 };
+const ME = { education: "硕士", majors: { graduate: { codes: [], names: [] } }, fresh: "maybe", work_months: 3 };
+const statusOf = (job, profile, rule) => Match.evaluate({ ...BASE, ...job }, { ...ME, ...profile }, rule).status;
+
+test("政治面貌：「党员或团员」团员也可以报", () => {
+  assert.equal(statusOf({ po: "中共党员或共青团员", mb: "不限" }, { politics: "共青团员" }), "check");   // 专业没填，只剩提醒
+  assert.equal(statusOf({ po: "中共党员或共青团员" }, { politics: "群众" }), "no");
+  assert.equal(statusOf({ po: "中共党员（含预备党员）" }, { politics: "共青团员" }), "no");
+  assert.equal(statusOf({ po: "共青团员" }, { politics: "群众" }), "no");
+});
+
+test("资格证书：聘用后取得、纯说明都不是前置条件", () => {
+  const e = Match.evaluate({ ...BASE, cr: "录用后2年内必须取得教师资格证，逾期未取得，解除聘用合同", cl: ["录用后2年内必须取得教师资格证", "逾期未取得", "解除聘用合同"] }, ME);
+  assert.deepEqual(e.no, []);
+  assert.ok(e.check.some((c) => c.includes("聘用后取得")));
+  const n = Match.evaluate({ ...BASE, cr: "（资格审核时提供相关证明文件）", cl: ["（资格审核时提供相关证明文件）"] }, ME);
+  assert.deepEqual(n.no, []);
+  assert.equal(Match.evaluate({ ...BASE, cr: "教师资格", cl: ["教师资格"] }, ME).no[0][0], "certs");
+});
+
+test("年龄：岗位表没写时按批次的公告规定提醒", () => {
+  const rule = { age_default: { max: 38, relaxed: 43 }, closed: false };
+  const job = { ag: "", amx: undefined };
+  assert.equal(Match.evaluate({ ...BASE, ...job }, { ...ME, age: 40 }, rule).check.some((c) => c.includes("岗位表未写年龄要求")), true);
+  assert.equal(Match.evaluate({ ...BASE, ...job }, { ...ME, age: 44 }, rule).no[0][0], "age");
+  assert.equal(Match.evaluate({ ...BASE, ...job }, { ...ME, age: 44 }).no.length, 0);        // 没有批次规则不判断
+});

@@ -64,13 +64,15 @@
     return "no";
   }
 
+  const AFTER_HIRE = /(录用|聘用|入职|上岗)后/, CERT_NOTE = /提供|复审|审核/;
+
   // ---------- 应届身份 ----------
 
   function freshVerdict(profile, rule) {
     const pf = profile.fresh == null ? "auto" : profile.fresh;
     if (pf === "yes" || pf === "no") return [pf, `按所设定的应届身份（${pf === "yes" ? "应届" : "往届"}）`];
     const gy = profile.graduate_year;
-    if (pf === "maybe" || !rule || gy == null) return ["maybe", "是否属于应届取决于当地认定，需查阅公告或咨询招聘单位"];
+    if (pf === "maybe" || !rule || !("kind" in rule) || gy == null) return ["maybe", "是否属于应届取决于当地认定，需查阅公告或咨询招聘单位"];
     const kind = rule.kind, window = rule.window == null ? 2 : rule.window;
     const c = rule.cohort + (rule.closed ? 1 : 0);
     const tail = rule.closed ? `（按已结束的这一批的规则推断，假设下一批规则不变、届别顺延到 ${c} 届）` : "";
@@ -227,6 +229,11 @@
       mx = mx && relaxed ? Math.max(mx, relaxed) : (mx || relaxed || null);
       if (mx !== null && age > mx) no.push(["age", `年龄上限 ${mx} 周岁，考生 ${age} 岁`]);
       else if (mx === null && job.ag) check.push(`年龄要求「${job.ag.slice(0, 20)}」无法识别，需核对`);
+      else if (mx === null && freshRule && freshRule.age_default) {
+        const d = freshRule.age_default;
+        if (age > d.relaxed) no.push(["age", `公告规定年龄上限 ${d.max} 周岁（部分情形最多放宽至 ${d.relaxed} 周岁），岗位表未另写，考生 ${age} 岁`]);
+        else if (age > d.max) check.push(`岗位表未写年龄要求，公告规定年龄上限 ${d.max} 周岁（部分情形放宽至 ${d.relaxed} 周岁），考生 ${age} 岁，需核对`);
+      }
     }
 
     // 性别：只有岗位明确限定了才筛，没填性别时只提醒
@@ -241,8 +248,13 @@
     // 资格证书（英语四六级单独处理：六级满足四级；没填英语等级就只提醒，不判不符）
     const held = list(profile.certs);
     const missing = [];
-    for (const c of list(job.cl)) {
-      if (/英语[四六]级|CET/.test(c)) {
+    const certsText = job.cr || "";
+    const afterHire = AFTER_HIRE.test(certsText);
+    if (afterHire) check.push(`资格证书要求「${certsText.slice(0, 40)}」，其中写明聘用后取得，需核对`);   // 「聘用后 2 年内取得……」不是报名条件
+    for (const c of afterHire ? [] : list(job.cl)) {
+      if (CERT_NOTE.test(c)) {
+        check.push(`资格证书一栏写的是说明「${c.slice(0, 30)}」，需核对`);                             // 「资格审核时提供相关证明文件」这类不是证书
+      } else if (/英语[四六]级|CET/.test(c)) {
         const need = (has(c, "六级") && U >= 3) || !has(c, "四级") ? 6 : 4;
         const have = profile.english;
         if (have == null) check.push(`要求大学英语${need === 6 ? "六" : "四"}级，未填写英语等级`);
@@ -261,8 +273,7 @@
     if (pol) {
       if (minePol == null) {
         check.push(`政治面貌要求「${pol}」，未填写政治面貌`);
-      } else if ((has(pol, "党员") && !has(minePol, "党员"))
-        || (has(pol, "团员") && !has(pol, "党员") && !["党员", "团员"].some((x) => has(minePol, x)))) {
+      } else if ((has(pol, "党员") || has(pol, "团员")) && !(has(minePol, "党员") || (has(pol, "团员") && has(minePol, "团员")))) {
         no.push(["politics", `政治面貌要求「${pol}」，考生为${minePol}`]);
       }
     }

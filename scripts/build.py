@@ -26,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lib.export import export_job
-from lib.match import REASON_LABEL, evaluate, load_profile, main_reason
+from lib.match import REASON_LABEL, batch_rule, evaluate, load_profile, main_reason
 from lib.regions import ROOT, discover
 from lib.schema import read_jobs
 
@@ -85,7 +85,7 @@ def main():
                             "total": len(jobs), "file": f"jobs/{name}.json", "csv": f"csv/{name}.csv"})
             if profile:      # Python 版的匹配：只用来打印摘要
                 status = batch_status(b, today)
-                fr = b.get("fresh_rule")
+                fr = batch_rule(b)
                 rule = {**fr, "closed": status == "closed"} if fr else None
                 kept = 0
                 for j in jobs:

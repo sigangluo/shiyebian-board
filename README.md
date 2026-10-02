@@ -94,7 +94,7 @@ python3 scripts/publish.py --push        # 确认无误后强制推送到 gh-pag
 |---|---|
 | `regions/<地区>/fetch.py` | 每个地区一个文件：META（元信息和批次）+ fetch()（下载并解析岗位表）。目录自动发现 |
 | `scripts/` | `update.py` 抓取 + 合并入口；`build.py` 生成看板数据（不筛选）；`publish.py` 发布；`lib/` 是共用代码（统一岗位格式、文字解析、导出、Python 版匹配规则等） |
-| `site/` | 静态看板，没有构建步骤：`prep.html` 是备考指南，`assets/match.js` 是浏览器里的匹配规则，`assets/exam.js` 渲染批次的考试摘要，`assets/app.js` 是界面，`assets/picker.js` 是可搜索的选择控件，`assets/options.js` 是表单选项的逻辑，`assets/options.json` 是选项数据（专业目录、省市、证书） |
+| `site/` | 静态看板，没有构建步骤：`assets/stats.js` 是「数据概览」的统计逻辑，`prep.html` 是备考指南，`assets/match.js` 是浏览器里的匹配规则，`assets/exam.js` 渲染批次的考试摘要，`assets/app.js` 是界面，`assets/picker.js` 是可搜索的选择控件，`assets/options.js` 是表单选项的逻辑，`assets/options.json` 是选项数据（专业目录、省市、证书） |
 | `scripts/build_options.py` | 从教育部目录生成 `site/assets/options.json`（生成结果已提交，平时无需运行；目录更新时再运行，需要 poppler 的 `pdftotext`） |
 | `profile.json` | 可选，个人条件（仅在本机，不进 git） |
 | `raw/`、`data/`、`site/data/` | 下载的岗位表原件、解析后的 CSV、看板数据（都不进 git） |

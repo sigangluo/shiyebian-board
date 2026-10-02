@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from lib.match import (evaluate, fresh_verdict, major_fit, parse_education, parse_experience_years, parse_major,
+from lib.match import (batch_rule, evaluate, fresh_verdict, major_fit, parse_education, parse_experience_years, parse_major,
                        parse_max_age, parse_relaxed_age)
 from lib.schema import make_job, validate
 
@@ -312,6 +312,53 @@ class Evaluate(unittest.TestCase):
     def test_no_reason_wins_over_check(self):
         r = evaluate(job(major_graduate="会计学(A120201)", fresh="应届毕业生"), ME)
         self.assertEqual(r["status"], "no")
+
+
+class AuditFixes(unittest.TestCase):
+    """全量核对时发现的几处误判：这些情形不该判「不符」。"""
+
+    def test_politics_either_party_or_league(self):
+        j = job(politics="中共党员或共青团员")
+        self.assertEqual(evaluate(j, {**ME, "politics": "共青团员"})["status"], "ok")     # 团员也可以报
+        self.assertEqual(evaluate(j, {**ME, "politics": "中共党员"})["status"], "ok")
+        self.assertEqual(evaluate(j, {**ME, "politics": "群众"})["status"], "no")
+        only_party = job(politics="中共党员（含预备党员）")
+        self.assertEqual(evaluate(only_party, {**ME, "politics": "共青团员"})["status"], "no")
+        self.assertEqual(evaluate(job(politics="共青团员"), {**ME, "politics": "群众"})["status"], "no")
+
+    def test_cert_after_hire_is_not_a_prerequisite(self):
+        j = job(certs="录用后2年内必须取得中职、高中或高等教育教师资格证，逾期未取得，解除聘用合同")
+        ev = evaluate(j, ME)
+        self.assertEqual(ev["status"], "check")
+        self.assertTrue(any("聘用后取得" in c for c in ev["check"]))
+        self.assertEqual(evaluate(job(certs="教师资格"), ME)["status"], "no")           # 真正的前置证书仍然判不符
+
+    def test_cert_note_is_not_a_certificate(self):
+        ev = evaluate(job(certs="（资格审核时提供相关证明文件）"), ME)
+        self.assertEqual(ev["status"], "check")
+        self.assertEqual(ev["no"], [])
+
+    def test_age_lower_bound_is_not_a_max(self):
+        self.assertIsNone(parse_max_age("年满18周岁以上"))
+        self.assertEqual(parse_max_age("18周岁以上，38周岁以下"), 38)
+        self.assertEqual(parse_max_age("年龄40周岁"), 40)
+
+    def test_age_default_when_table_has_no_age(self):
+        rule = batch_rule({"age_default": {"max": 38, "relaxed": 43}})
+        j = job(age="", age_relaxed="")
+        at = lambda age: evaluate(j, {**ME, "age": age}, rule)["status"]
+        self.assertEqual(at(38), "ok")
+        self.assertEqual(at(40), "check")                  # 38 < 年龄 <= 43：公告里有放宽的情形，只提醒
+        self.assertEqual(at(44), "no")
+        self.assertEqual(evaluate(j, {**ME, "age": 44})["status"], "ok")                   # 没有批次规则时不判断
+        self.assertEqual(evaluate(job(age="18-45周岁"), {**ME, "age": 40}, rule)["status"], "ok")   # 岗位表写了就按岗位表
+
+    def test_batch_rule(self):
+        self.assertIsNone(batch_rule({}))
+        fr = {"kind": "year", "cohort": 2026}
+        self.assertEqual(batch_rule({"fresh_rule": fr}), fr)
+        self.assertEqual(batch_rule({"fresh_rule": fr, "age_default": {"max": 38, "relaxed": 43}})["age_default"]["max"], 38)
+        self.assertEqual(fresh_verdict({**ME, "fresh": "auto", "graduate_year": 2026}, {"age_default": {"max": 38, "relaxed": 43}})[0], "maybe")
 
 
 class Validate(unittest.TestCase):
